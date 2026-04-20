@@ -14,12 +14,19 @@ public class PlayerController : MonoBehaviour
     private float horizontalInput;
     private float verticalInput;
 
+    public GameObject thrusters;
+    public GameObject shield;
+    public int weaponType;
+    public bool shieldActive;
+
     public GameObject bulletPrefab;
 
 
     // Start is called before the first frame update
     void Start()
     {
+        shieldActive = false;
+        weaponType = 1;
         playerSpeed = 6f;
         lives = 3;
         gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
@@ -35,11 +42,87 @@ public class PlayerController : MonoBehaviour
 
     public void LoseALife()
     {
-        lives--;
+        if (!shieldActive)
+        {
+            lives--;
+        }
+        if (shieldActive)
+        {
+            shield.SetActive(false);
+            shieldActive=false;
+        }
+
         gameManager.ChangeLivesText(lives);
-        if (lives == 0){
+        if (lives == 0)
+        {
             Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+            gameManager.GameOver();
+
+
             Destroy(this.gameObject);
+        }
+    }
+
+    IEnumerator ShieldPowerDown()
+    {
+        yield return new WaitForSeconds(5);
+        shield.SetActive(false);
+        shieldActive = false;
+        gameManager.PlaySound(2);
+        gameManager.ManagePowerupText(5);
+    }
+
+    IEnumerator SpeedPowerDown()
+    {
+        yield return new WaitForSeconds(5);
+        playerSpeed = 5f;
+        thrusters.SetActive(false);
+        gameManager.PlaySound(2);
+        gameManager.ManagePowerupText(5);
+    }
+
+    IEnumerator WeaponPowerDown()
+    {
+        yield return new WaitForSeconds(5);
+        weaponType = 1;
+        gameManager.PlaySound(2);
+        gameManager.ManagePowerupText(5);
+    }
+
+
+
+    private void OnTriggerEnter2D(Collider2D whatDidIHit)
+    {
+        if(whatDidIHit.tag == "PowerUp")
+        {
+            Destroy(whatDidIHit.gameObject);
+            int whichPowerUp = Random.Range(1, 5);
+            gameManager.PlaySound(1);
+            switch (whichPowerUp)
+            {
+                case 1:
+                    playerSpeed = 10f;
+                    thrusters.SetActive(true);
+                    gameManager.ManagePowerupText(1);
+                    StartCoroutine(SpeedPowerDown());
+                    break;
+                case 2:
+                    weaponType = 2;
+                    StartCoroutine(WeaponPowerDown());
+                    gameManager.ManagePowerupText(2);
+                    break;
+                case 3:
+                    weaponType = 3;
+                    StartCoroutine(WeaponPowerDown());
+                    gameManager.ManagePowerupText(3);
+                    break;
+                case 4:
+                    shield.SetActive(true);
+                    shieldActive = true;
+                    gameManager.ManagePowerupText(4);
+                    StartCoroutine(ShieldPowerDown());
+                    break;
+            }
         }
     }
 
@@ -47,7 +130,21 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            Instantiate(bulletPrefab, transform.position + new Vector3(0, 1, 0), Quaternion.identity);
+            switch (weaponType)
+            {
+                case 1:
+                    Instantiate(bulletPrefab, transform.position + new Vector3(0, 0.5f, 0), Quaternion.identity);
+                    break;
+                case 2:
+                    Instantiate(bulletPrefab, transform.position + new Vector3(-0.5f, 0.5f, 0), Quaternion.identity);
+                    Instantiate(bulletPrefab, transform.position + new Vector3(0.5f, 0.5f, 0), Quaternion.identity);
+                    break;
+                case 3:
+                    Instantiate(bulletPrefab, transform.position + new Vector3(-0.5f, 0.5f, 0), Quaternion.Euler(0, 0, 45));
+                    Instantiate(bulletPrefab, transform.position + new Vector3(0, 0.5f, 0), Quaternion.identity);
+                    Instantiate(bulletPrefab, transform.position + new Vector3(0.5f, 0.5f, 0), Quaternion.Euler(0, 0, -45));
+                    break;
+            }
         }
     }
 
